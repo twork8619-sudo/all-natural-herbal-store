@@ -765,6 +765,8 @@
       .store-control .sc-row { display: flex; flex-wrap: wrap; gap: 0.7rem; align-items: flex-end; }
       .store-control .sc-row .dash-field { flex: 1 1 210px; }
       .store-control .sc-state { font-weight: 800; color: #14632e; }
+      .store-control .sc-pw { margin-top: 1rem; padding-top: 0.9rem; border-top: 1px dashed var(--dash-line); }
+      .store-control .sc-pw-title { font-weight: 800; margin: 0 0 0.55rem; }
       @media (prefers-color-scheme: dark) { .store-control .sc-state { color: #7de8a3; } }
       .sc-msg { display: none; margin: 0.9rem 0 0; padding: 0.65rem 0.8rem; border-radius: 9px; font-weight: 700; font-size: 0.92rem; }
       .sc-msg.show { display: block; }
@@ -1875,6 +1877,13 @@
               <div id="scSignedIn" hidden>
                 <p class="sc-state" id="scStateText" style="margin:0 0 0.6rem;">Store control: ON (twork8619@gmail.com)</p>
                 <button class="ghost-btn" type="button" id="scSignOutBtn">Sign out</button>
+                <div class="sc-pw">
+                  <p class="sc-pw-title">Set / change owner password</p>
+                  <div class="sc-row">
+                    <div class="dash-field"><label for="sc-new-password">Owner password</label><input id="sc-new-password" type="password" autocomplete="new-password" placeholder="Type a new owner password" /></div>
+                    <button class="action-btn" type="button" id="scSavePwBtn" style="padding:0.72rem 1.15rem;">Save password</button>
+                  </div>
+                </div>
               </div>
               <p class="sc-msg" id="scMsg" role="status"></p>
             </div>
@@ -4364,6 +4373,30 @@
           }
           if (btn) btn.addEventListener("click", doSignIn);
           if (pwInput) pwInput.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); doSignIn(); } });
+          // Set / change the owner password for the signed-in Store
+          // control account. Works whenever a Supabase session exists —
+          // including right after arriving from a password-recovery
+          // email link, which signs the owner in on that device.
+          var savePwBtn = document.getElementById("scSavePwBtn");
+          var newPwInput = document.getElementById("sc-new-password");
+          function doSavePassword() {
+            if (!sb) { scMsg("Store control could not load — check your connection, reload the page and try again.", "err"); return; }
+            var pw = newPwInput ? newPwInput.value : "";
+            if (!pw) { scMsg("Type a new owner password first, then press Save password.", "err"); return; }
+            savePwBtn.disabled = true;
+            scMsg("Saving owner password…", "info");
+            sb.auth.updateUser({ password: pw }).then(function (res) {
+              savePwBtn.disabled = false;
+              if (res.error) { scMsg("Could not save the owner password: " + res.error.message, "err"); return; }
+              if (newPwInput) newPwInput.value = "";
+              scMsg("Owner password saved — you can now sign in to Store control with this password on any device.", "ok");
+            }).catch(function () {
+              savePwBtn.disabled = false;
+              scMsg("Could not save the owner password — please check your connection and try again.", "err");
+            });
+          }
+          if (savePwBtn) savePwBtn.addEventListener("click", doSavePassword);
+          if (newPwInput) newPwInput.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); doSavePassword(); } });
           var outBtn = document.getElementById("scSignOutBtn");
           if (outBtn) outBtn.addEventListener("click", function () {
             if (!sb) { sbUser = null; renderStoreControl(); return; }
