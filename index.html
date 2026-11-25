@@ -755,6 +755,23 @@
       .avail-state.on { color: #14632e; }
       .avail-state.off { color: #b42318; }
       @media (prefers-color-scheme: dark) { .avail-state.on { color: #7de8a3; } .avail-state.off { color: #ff9d8f; } .avail-btn[data-avail="enable"]:not(.is-on):hover { color: #7de8a3; } .avail-btn[data-avail="disable"]:not(.is-on):hover { color: #ff9d8f; } }
+      /* While live product availability loads from Supabase, hold the shop
+         grid and product sections hidden so a switched-off product never
+         flashes on screen before its live status arrives. The class is
+         removed as soon as the statuses are applied — or when the load
+         gives up and the built-in defaults (both active) are used. */
+      html.sb-loading #shopGrid, html.sb-loading main .product { visibility: hidden; }
+      /* Store control — Supabase owner sign-in for the live Enable/Disable switch */
+      .store-control .sc-row { display: flex; flex-wrap: wrap; gap: 0.7rem; align-items: flex-end; }
+      .store-control .sc-row .dash-field { flex: 1 1 210px; }
+      .store-control .sc-state { font-weight: 800; color: #14632e; }
+      @media (prefers-color-scheme: dark) { .store-control .sc-state { color: #7de8a3; } }
+      .sc-msg { display: none; margin: 0.9rem 0 0; padding: 0.65rem 0.8rem; border-radius: 9px; font-weight: 700; font-size: 0.92rem; }
+      .sc-msg.show { display: block; }
+      .sc-msg.info { border: 1px solid rgba(124,92,7,.45); background: rgba(201,162,39,.12); color: #7c5c07; }
+      .sc-msg.ok { border: 1px solid rgba(28,106,76,.45); background: rgba(28,106,76,.10); color: var(--green-800); }
+      .sc-msg.err { border: 1px solid rgba(180,35,24,.45); background: rgba(180,35,24,.09); color: #b42318; }
+      @media (prefers-color-scheme: dark) { .sc-msg.info { color: var(--gold-soft); } .sc-msg.ok { color: #7de8a3; } .sc-msg.err { color: #ff9d8f; } }
       .list-row.is-disabled { opacity: 0.92; }
       .list-row.is-disabled img { filter: grayscale(0.35); }
       .add-prod-btn { background: var(--gold); color: #221a05; border: none; border-radius: 9px; padding: 0.65rem 1.05rem; font-weight: 800; font-size: 0.92rem; white-space: nowrap; }
@@ -950,6 +967,13 @@
         var q = window.location.search || "";
         var dash = h === "#dashboard" || h === "#seller" || h === "#login" || /[?&](dashboard|seller|login)([=&]|$)/.test(q);
         document.documentElement.setAttribute("data-auth", "locked");
+        // Hold the shop hidden until live product availability has been
+        // applied from Supabase (or the load gives up and the built-in
+        // defaults are used), so a switched-off product never flashes.
+        // The main script removes this class as soon as it knows the
+        // live statuses; this timer is only a safety net.
+        document.documentElement.classList.add("sb-loading");
+        setTimeout(function () { document.documentElement.classList.remove("sb-loading"); }, 6000);
         document.documentElement.setAttribute("data-route", h === "#prolan" ? "prolan" : h === "#maxpower" ? "maxpower" : h === "#contact" ? "contact" : h === "#terms" ? "terms" : h === "#privacy" ? "privacy" : h === "#disclaimer-page" ? "disclaimerpage" : h === "#shipping" ? "shipping" : h === "#returns" ? "returns" : dash ? "dashboard" : "shop");
       })();
       // Hard entry point for the Seller Dashboard, defined before the main
@@ -1838,6 +1862,22 @@
               <div><h2>Products</h2><p>Your live catalogue — add, edit or delete products. Use <strong>Enable</strong> (green) to show a product on the store, or <strong>Disable</strong> (red) to hide it from the store. Every change updates the storefront instantly.</p></div>
               <button class="add-prod-btn" type="button" id="addProductBtn">+ Add new product</button>
             </div>
+            <div class="dash-panel store-control" id="storeControlPanel">
+              <h3>Store control</h3>
+              <p class="panel-sub">The Enable / Disable switch for PROLAN and Max Power changes the <strong>live store for all customers</strong> — product availability is kept online, so a product you switch off stays off for every visitor until you switch it back on. Sign in here with the store owner account to use the switch.</p>
+              <div id="scSignedOut">
+                <div class="sc-row">
+                  <div class="dash-field"><label for="sc-email">Owner email</label><input id="sc-email" type="email" value="twork8619@gmail.com" autocomplete="username" /></div>
+                  <div class="dash-field"><label for="sc-password">Password</label><input id="sc-password" type="password" autocomplete="current-password" placeholder="Store control password" /></div>
+                  <button class="action-btn" type="button" id="scSignInBtn" style="padding:0.72rem 1.15rem;">Sign in</button>
+                </div>
+              </div>
+              <div id="scSignedIn" hidden>
+                <p class="sc-state" id="scStateText" style="margin:0 0 0.6rem;">Store control: ON (twork8619@gmail.com)</p>
+                <button class="ghost-btn" type="button" id="scSignOutBtn">Sign out</button>
+              </div>
+              <p class="sc-msg" id="scMsg" role="status"></p>
+            </div>
             <div class="dash-panel"><div id="productsList"></div></div>
           </section>
 
@@ -2145,6 +2185,7 @@
       <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
     </button>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
       (function () {
         // ---- Separate-page routing: #shop (landing), #prolan, #maxpower, #dashboard ----
@@ -3245,15 +3286,11 @@
           document.getElementById("productsList").innerHTML = html || '<p style="color:var(--dash-muted);">No products yet — add your first product.</p>';
         }
 
-        function setProductAvailability(id, enabled) {
-          var pr = findProduct(id);
-          if (!pr) return;
-          var nextStatus = enabled ? "active" : "draft";
-          if ((pr.status || "active") === nextStatus) {
-            dashToast(pr.name + (enabled ? " is already Enabled — displayed on the store" : " is already Disabled — hidden from the store"));
-            return;
-          }
-          pr.status = nextStatus;
+        // Apply an availability change to this page only: storefront
+        // section, shop grid reflow (no gap), footer links, cart and the
+        // dashboard list all follow the product's status.
+        function applyAvailabilityLocal(pr, enabled) {
+          pr.status = enabled ? "active" : "draft";
           // If a disabled product is in the cart, remove it so a hidden
           // product can never be checked out.
           if (!enabled && cart[pr.name]) { delete cart[pr.name]; renderCart(); }
@@ -3265,6 +3302,47 @@
           renderProducts();
           syncProductNav();
           refreshProductVisibility();
+        }
+
+        function setProductAvailability(id, enabled) {
+          var pr = findProduct(id);
+          if (!pr) return;
+          var nextStatus = enabled ? "active" : "draft";
+          if ((pr.status || "active") === nextStatus) {
+            dashToast(pr.name + (enabled ? " is already Enabled — displayed on the store" : " is already Disabled — hidden from the store"));
+            return;
+          }
+          // The two built-in products are live for every customer: their
+          // switch writes to Supabase, and only the signed-in owner may
+          // write (Supabase row-level security enforces the same rule
+          // online). Without a Store control sign-in nothing changes.
+          if (isBuiltinProduct(pr)) {
+            if (!sbUser) {
+              scMsg("Sign in to Store control first — this switch changes the live store for all customers.", "info");
+              dashToast("Sign in to Store control first — this switch changes the live store for all customers.");
+              var panel = document.getElementById("storeControlPanel");
+              if (panel) panel.scrollIntoView({ behavior: "smooth", block: "center" });
+              return;
+            }
+            if (!sb) { scMsg("Store control could not load — check your connection, reload the page and try again.", "err"); return; }
+            sb.from("products").update({ status: nextStatus }).eq("id", pr.id).select("id").then(function (res) {
+              if (res.error || !res.data || !res.data.length) {
+                scMsg("The live store was not updated" + (res.error ? ": " + res.error.message : " — the change was not accepted.") + " " + pr.name + " was not changed.", "err");
+                dashToast("Live store update failed — " + pr.name + " was not changed");
+                return;
+              }
+              applyAvailabilityLocal(pr, enabled);
+              var msg = "Live store updated: " + pr.name + " is now " + (enabled ? "ON" : "OFF") + " for all customers.";
+              scMsg(msg, "ok");
+              dashToast(msg);
+            }).catch(function () {
+              scMsg("The live store was not updated — please check your connection and try again. " + pr.name + " was not changed.", "err");
+            });
+            return;
+          }
+          // Products added later in the dashboard are not in Supabase and
+          // stay local to this session, exactly as before.
+          applyAvailabilityLocal(pr, enabled);
           dashToast(enabled ? pr.name + " — Enabled: now displayed on the store" : pr.name + " — Disabled: now hidden from the store, shop reflowed with no gap");
         }
 
@@ -4008,8 +4086,10 @@
             status: document.getElementById("pf-status").value
           };
           var pr;
+          var prevStatus = null;
           if (editingProductId && findProduct(editingProductId)) {
             pr = findProduct(editingProductId);
+            prevStatus = pr.status || "active";
             Object.keys(data).forEach(function (k) { pr[k] = data[k]; });
             if (pr.id === "prolan" || pr.id === "maxpower") { /* keep main gallery photo for the two originals */ } else pr.mainImg = pr.img;
             dashToast("Product updated — " + pr.name + " (" + fmt(pr.price) + ")");
@@ -4026,6 +4106,10 @@
           renderShopGrid();
           renderDashboard();
           refreshProductVisibility();
+          // If the edit changed a built-in product's availability and the
+          // owner is signed in to Store control, write it to the live
+          // store too — the same rule as the Enable / Disable switch.
+          pushLiveStatus(pr, prevStatus);
         });
 
         // ----- Delete product -----
@@ -4134,6 +4218,164 @@
           dashFilter = "all"; renderOrders();
           dashToast("Manual order #" + id + " added (" + (sourceLabels[source] || source) + ")");
         });
+
+        // ================= Live product availability (Supabase) =================
+        // The ON/OFF state of the two built-in products lives in the
+        // owner's Supabase project (table public.products, ids "prolan"
+        // and "maxpower", status "active" / "draft"), so the dashboard
+        // Enable / Disable switch controls the real store for every
+        // visitor, from any device. Anyone may read the statuses; only
+        // the signed-in owner (twork8619@gmail.com) may change them —
+        // enforced by Supabase row-level security. Products the seller
+        // adds later in the dashboard are not in Supabase and stay local
+        // to the session, exactly as before. If Supabase cannot be
+        // reached, the store falls back to the built-in defaults (both
+        // active) so the shop never breaks.
+        var SB_URL = "https://fqlxqixppjziifrtaivh.supabase.co";
+        var SB_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZxbHhxaXhwcGp6aWlmcnRhaXZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTU2Mjc2NTcsImV4cCI6MjExMTIwMzY1N30.082GhrQwt5MbchLyfCZVnBgRo07bl4Ojev6bF7UJ5cU";
+        var SB_OWNER_EMAIL = "twork8619@gmail.com";
+        var SB_BUILTIN_IDS = { prolan: 1, maxpower: 1 };
+        var sb = null;
+        try { if (window.supabase && window.supabase.createClient) sb = window.supabase.createClient(SB_URL, SB_ANON_KEY); } catch (e) { sb = null; }
+        var sbUser = null; // signed-in Store control user, if any
+
+        function isBuiltinProduct(pr) { return !!pr && !!SB_BUILTIN_IDS[pr.id]; }
+
+        function scMsg(text, kind) {
+          var el = document.getElementById("scMsg");
+          if (!el) return;
+          if (!text) { el.className = "sc-msg"; el.textContent = ""; return; }
+          el.className = "sc-msg show " + (kind || "info");
+          el.textContent = text;
+        }
+
+        function renderStoreControl() {
+          var out = document.getElementById("scSignedOut");
+          var inn = document.getElementById("scSignedIn");
+          var st = document.getElementById("scStateText");
+          if (!out || !inn) return;
+          if (sbUser) {
+            out.hidden = true;
+            inn.hidden = false;
+            if (st) st.textContent = "Store control: ON (" + (sbUser.email || SB_OWNER_EMAIL) + ")";
+          } else {
+            out.hidden = false;
+            inn.hidden = true;
+          }
+        }
+
+        // Apply one live status to the local product state, reusing the
+        // same storefront sync as the dashboard switch: section hiding,
+        // shop-grid reflow with no gap, footer-link hiding, cart removal.
+        function applyLiveStatus(pr, status) {
+          var next = status === "draft" ? "draft" : "active";
+          if ((pr.status || "active") === next) return;
+          pr.status = next;
+          if (next === "draft" && cart[pr.name]) { delete cart[pr.name]; renderCart(); }
+          if (next === "draft" && (activeProductId === pr.id || window.location.hash === "#" + pr.id)) { activeRoute = "shop"; activeProductId = null; syncHash("#shop"); applyRoute(); }
+          syncProductSection(pr);
+        }
+
+        // Fetch both built-in statuses and apply them before the shop is
+        // revealed (the page starts with the sb-loading hold). Any
+        // failure — or a load that takes too long — reveals the shop
+        // with the built-in defaults instead.
+        function loadLiveStatuses() {
+          var revealed = false;
+          function reveal() {
+            if (revealed) return;
+            revealed = true;
+            document.documentElement.classList.remove("sb-loading");
+          }
+          setTimeout(reveal, 3000);
+          if (!sb) { reveal(); return; }
+          try {
+            sb.from("products").select("id, status").in("id", ["prolan", "maxpower"]).then(function (res) {
+              if (!res.error && res.data) {
+                res.data.forEach(function (row) {
+                  var pr = findProduct(row.id);
+                  if (pr) applyLiveStatus(pr, row.status);
+                });
+                renderShopGrid();
+                syncProductNav();
+                refreshProductVisibility();
+                try { renderProducts(); } catch (e) {}
+              }
+              reveal();
+            }).catch(function () { reveal(); });
+          } catch (e) { reveal(); }
+        }
+
+        // Write one built-in product's current local status to Supabase
+        // (used when the product edit form changes availability). Only
+        // runs while the owner is signed in to Store control.
+        function pushLiveStatus(pr, prevStatus) {
+          if (!isBuiltinProduct(pr) || !sb || !sbUser) return;
+          if ((pr.status || "active") === (prevStatus || "active")) return;
+          sb.from("products").update({ status: pr.status || "active" }).eq("id", pr.id).select("id").then(function (res) {
+            if (res.error || !res.data || !res.data.length) {
+              scMsg("The live store was not updated — " + pr.name + " still shows its previous availability to customers. Use the Enable / Disable switch to try again.", "err");
+              return;
+            }
+            scMsg("Live store updated: " + pr.name + " is now " + (pr.status === "draft" ? "OFF" : "ON") + " for all customers.", "ok");
+          }).catch(function () {
+            scMsg("The live store was not updated — please check your connection. " + pr.name + " still shows its previous availability to customers.", "err");
+          });
+        }
+
+        // Store control sign-in (Supabase Auth, email + password).
+        // supabase-js keeps the session in this browser, so the owner
+        // signs in once and the switch stays unlocked on this device
+        // until they sign out. The dashboard's own password gate above
+        // is unchanged and still comes first.
+        function initStoreControl() {
+          renderStoreControl();
+          if (!sb) return;
+          try {
+            sb.auth.getSession().then(function (res) {
+              sbUser = res && res.data && res.data.session ? res.data.session.user : null;
+              renderStoreControl();
+            }).catch(function () {});
+            sb.auth.onAuthStateChange(function (event, session) {
+              sbUser = session ? session.user : null;
+              renderStoreControl();
+            });
+          } catch (e) {}
+          var btn = document.getElementById("scSignInBtn");
+          var pwInput = document.getElementById("sc-password");
+          function doSignIn() {
+            if (!sb) { scMsg("Store control could not load — check your connection, reload the page and try again.", "err"); return; }
+            var email = (document.getElementById("sc-email").value || "").trim();
+            var pw = pwInput ? pwInput.value : "";
+            if (!email || !pw) { scMsg("Enter the owner email and password to sign in to Store control.", "err"); return; }
+            btn.disabled = true;
+            scMsg("Signing in…", "info");
+            sb.auth.signInWithPassword({ email: email, password: pw }).then(function (res) {
+              btn.disabled = false;
+              if (res.error) { scMsg("Sign-in failed: " + res.error.message, "err"); return; }
+              if (res.data && res.data.user) sbUser = res.data.user;
+              if (pwInput) pwInput.value = "";
+              renderStoreControl();
+              scMsg("Store control is ON — the Enable / Disable switch now updates the live store for all customers.", "ok");
+            }).catch(function () {
+              btn.disabled = false;
+              scMsg("Sign-in failed — please check your connection and try again.", "err");
+            });
+          }
+          if (btn) btn.addEventListener("click", doSignIn);
+          if (pwInput) pwInput.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); doSignIn(); } });
+          var outBtn = document.getElementById("scSignOutBtn");
+          if (outBtn) outBtn.addEventListener("click", function () {
+            if (!sb) { sbUser = null; renderStoreControl(); return; }
+            sb.auth.signOut().then(function () {
+              sbUser = null;
+              renderStoreControl();
+              scMsg("Store control is OFF — sign in again to change the live store.", "info");
+            }).catch(function () {});
+          });
+        }
+        initStoreControl();
+        loadLiveStatuses();
 
         // Initial storefront sync for tags on the two original products
         dashProducts.forEach(function (pr) { syncProductSection(pr); });
